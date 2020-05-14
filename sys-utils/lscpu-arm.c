@@ -23,7 +23,7 @@
  *  - GCC sources: config/arch/arch-cores.def
  *  - Ancient wisdom
  */
-#include "lscpu.h"
+#include "lscpu-api.h"
 
 struct id_part {
     const int id;
@@ -201,61 +201,78 @@ static const struct hw_impl hw_implementer[] = {
     { -1,   unknown_part, "unknown" },
 };
 
-void arm_cpu_decode(struct lscpu_desc *desc)
+static void arm_decode(struct lscpu_cputype *ct)
 {
 	int j, impl, part;
 	const struct id_part *parts = NULL;
 	char *end;
 
-	if (desc->vendor == NULL || desc->model == NULL)
+	if (ct->vendor == NULL || ct->model == NULL)
 		return;
-	if ((strncmp(desc->vendor,"0x",2) || strncmp(desc->model,"0x",2) ))
-		return;
-
-	errno = 0;
-	impl = (int) strtol(desc->vendor, &end, 0);
-	if (errno || desc->vendor == end)
+	if ((strncmp(ct->vendor,"0x",2) || strncmp(ct->model,"0x",2) ))
 		return;
 
 	errno = 0;
-	part = (int) strtol(desc->model, &end, 0);
-	if (errno || desc->model == end)
+	impl = (int) strtol(ct->vendor, &end, 0);
+	if (errno || ct->vendor == end)
 		return;
+
+	errno = 0;
+	part = (int) strtol(ct->model, &end, 0);
+	if (errno || ct->model == end)
+		return;
+
+	DBG(TYPE, ul_debugobj(ct, "decoding ARM"));
 
 	for (j = 0; hw_implementer[j].id != -1; j++) {
 		if (hw_implementer[j].id == impl) {
 			parts = hw_implementer[j].parts;
-			desc->vendor = (char *) hw_implementer[j].name;
+			free(ct->vendor);
+			ct->vendor = xstrdup(hw_implementer[j].name);
 			break;
 		}
 	}
 
 	if (parts == NULL)
-		return;
+		goto done;
 
 	for (j = 0; parts[j].id != -1; j++) {
 		if (parts[j].id == part) {
-			desc->modelname = (char *) parts[j].name;
+			free(ct->modelname);
+			ct->modelname = xstrdup(parts[j].name);
 			break;
 		}
 	}
 
 	/* Print out the rXpY string for ARM cores */
-	if (impl == 0x41 && desc->revision && desc->stepping) {
+	if (impl == 0x41 && ct->revision && ct->stepping) {
 		int revision, variant;
 		char buf[8];
 
 		errno = 0;
-		revision = (int) strtol(desc->revision, &end, 10);
-		if (errno || desc->revision == end)
-			return;
+		revision = (int) strtol(ct->revision, &end, 10);
+		if (errno || ct->revision == end)
+			goto done;
 
 		errno = 0;
-		variant = (int) strtol(desc->stepping, &end, 0);
-		if (errno || desc->stepping == end)
-			return;
+		variant = (int) strtol(ct->stepping, &end, 0);
+		if (errno || ct->stepping == end)
+			goto done;
 
 		snprintf(buf, sizeof(buf), "r%dp%d", variant, revision);
-		desc->stepping = xstrdup(buf);
+		free(ct->stepping);
+		ct->stepping = xstrdup(buf);
 	}
+done:
+	DBG(TYPE, ul_debugobj(ct, " arm: vendor=%s model=%s modelname=%s stepping=%s",
+				ct->vendor, ct->model, ct->modelname, ct->stepping));
 }
+
+void lscpu_decode_arm(struct lscpu_cxt *cxt)
+{
+	size_t i;
+
+	for (i = 0; i < cxt->ncputypes; i++)
+		arm_decode(cxt->cputypes[i]);
+}
+

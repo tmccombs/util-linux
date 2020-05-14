@@ -191,6 +191,8 @@ int lscpu_add_cpu(struct lscpu_cxt *cxt,
                   struct lscpu_cputype *ct);
 int lscpu_cpus_apply_type(struct lscpu_cxt *cxt, struct lscpu_cputype *type);
 
+void lscpu_decode_arm(struct lscpu_cxt *cxt);
+
 struct lscpu_cxt *lscpu_new_context(void);
 void lscpu_free_context(struct lscpu_cxt *cxt);
 
