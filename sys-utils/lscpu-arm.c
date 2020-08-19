@@ -23,7 +23,7 @@
  *  - GCC sources: config/arch/arch-cores.def
  *  - Ancient wisdom
  */
-#include "lscpu-api.h"
+#include "lscpu.h"
 
 struct id_part {
     const int id;

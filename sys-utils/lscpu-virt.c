@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "lscpu-api.h"
+#include "lscpu.h"
 
 #if (defined(__x86_64__) || defined(__i386__))
 # if !defined( __SANITIZE_ADDRESS__)
